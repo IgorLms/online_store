@@ -1,4 +1,5 @@
 from django.db.models import ProtectedError
+from django.shortcuts import get_object_or_404
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from rest_framework.pagination import PageNumberPagination
@@ -9,7 +10,7 @@ from rest_framework import status, generics, mixins
 from rest_framework.viewsets import GenericViewSet
 
 from .models import UserCustom, Product, Category
-from .serilizers import UserLoginSerializer, UserRegisterSerializer, ProductViewSerializer, CategorySerializer
+from .serilizers import UserLoginSerializer, UserRegisterSerializer, ProductViewSerializer, CategorySerializer, ProductSerializer, HistoryChangesSerializer
 
 
 class UserLogIn(APIView):
@@ -93,3 +94,59 @@ class CategoryAPI(mixins.CreateModelMixin,
             ]
             response_data = {"protected_elements": protected_elements}
             return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProductAPI(mixins.CreateModelMixin,
+                 mixins.UpdateModelMixin,
+                 mixins.DestroyModelMixin,
+                 mixins.RetrieveModelMixin,
+                 GenericViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    permission_classes = (IsAuthenticated,)
+
+    def get_object(self):
+        pk = self.kwargs['pk']
+        if not pk:
+            return Response({"error": "Method PUT not allowed"})
+
+        return get_object_or_404(Product, pk=pk)
+
+    def update(self, request, *args, **kwargs):
+        pk = kwargs.get("pk", None)
+        if not pk:
+            return Response({"error": "Method PUT not allowed"})
+
+        try:
+            instance = Product.objects.get(pk=pk)
+        except:
+            return Response({"error": "Object does not exists"})
+
+        serializer_history = HistoryChangesSerializer(
+            data={
+                'product_id': instance.pk,
+                'quantity_old': instance.quantity,
+                'quantity_now': request.data['quantity'],
+
+            }
+        )
+        serializer_history.is_valid(raise_exception=True)
+        serializer_history.save()
+
+        serializer = ProductSerializer(data=request.data, instance=instance)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response({"update": serializer.data})
+
+    def create(self, request, *args, **kwargs):
+        try:
+            Product.objects.get(pk=request.data['category_id'])
+        except:
+            return Response({"error": "Object does not exists"})
+
+        serializer = ProductSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response({'post': serializer.data})
