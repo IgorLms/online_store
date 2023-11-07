@@ -1,11 +1,12 @@
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import status
+from rest_framework import status, generics
 
-from .models import UserCustom
-from .serilizers import UserLoginSerializer, UserRegisterSerializer
+from .models import UserCustom, Product
+from .serilizers import UserLoginSerializer, UserRegisterSerializer, ProductViewSerializer
 
 
 class UserLogIn(APIView):
@@ -58,3 +59,13 @@ class UserRegister(APIView):
             "data": serializer.errors
         }
         return Response(response, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ProductAPIViewPagination(PageNumberPagination):
+    page_size = 10
+
+
+class ProductAPIView(generics.ListAPIView):
+    queryset = Product.objects.all()
+    serializer_class = ProductViewSerializer
+    pagination_class = ProductAPIViewPagination

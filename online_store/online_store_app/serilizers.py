@@ -1,7 +1,7 @@
 from django.contrib.auth.hashers import make_password
 from rest_framework import serializers
 
-from .models import UserCustom
+from .models import UserCustom, Product
 
 
 class UserLoginSerializer(serializers.ModelSerializer):
@@ -35,3 +35,15 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             password=make_password(validated_data['password']),
         )
         return user
+
+
+class ProductViewSerializer(serializers.ModelSerializer):
+    name = serializers.ReadOnlyField(read_only=True)
+    description = serializers.ReadOnlyField(read_only=True)
+    category_name = serializers.CharField(source='category.name', read_only=True)
+    price = serializers.ReadOnlyField(read_only=True)
+    quantity = serializers.ReadOnlyField(read_only=True)
+
+    class Meta:
+        model = Product
+        fields = ('name', 'description', 'category_name', 'price', 'quantity')
