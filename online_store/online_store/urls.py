@@ -17,6 +17,10 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
+from online_store_app.views import UserLogIn, UserRegister
+
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('login/', UserLogIn.as_view()),
+    path('register/', UserRegister.as_view()),
 ]
