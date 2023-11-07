@@ -1,12 +1,15 @@
+from django.db.models import ProtectedError
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import status, generics
+from rest_framework import status, generics, mixins
+from rest_framework.viewsets import GenericViewSet
 
-from .models import UserCustom, Product
-from .serilizers import UserLoginSerializer, UserRegisterSerializer, ProductViewSerializer
+from .models import UserCustom, Product, Category
+from .serilizers import UserLoginSerializer, UserRegisterSerializer, ProductViewSerializer, CategorySerializer
 
 
 class UserLogIn(APIView):
@@ -69,3 +72,24 @@ class ProductAPIView(generics.ListAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductViewSerializer
     pagination_class = ProductAPIViewPagination
+
+
+class CategoryAPI(mixins.CreateModelMixin,
+                  mixins.UpdateModelMixin,
+                  mixins.DestroyModelMixin,
+                  mixins.ListModelMixin,
+                  GenericViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = (IsAuthenticated,)
+
+    def destroy(self, request, *args, **kwargs):
+        try:
+            return super().destroy(request, *args, **kwargs)
+        except ProtectedError as protected_error:
+            protected_elements = [
+                {"id": protected_object.pk, "label": str(protected_object)}
+                for protected_object in protected_error.protected_objects
+            ]
+            response_data = {"protected_elements": protected_elements}
+            return Response(data=response_data, status=status.HTTP_400_BAD_REQUEST)

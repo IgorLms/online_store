@@ -1,7 +1,8 @@
 from django.contrib.auth.hashers import make_password
+from django.db.models import Sum
 from rest_framework import serializers
 
-from .models import UserCustom, Product
+from .models import UserCustom, Product, Category
 
 
 class UserLoginSerializer(serializers.ModelSerializer):
@@ -47,3 +48,17 @@ class ProductViewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ('name', 'description', 'category_name', 'price', 'quantity')
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    id = serializers.ReadOnlyField()
+    name = serializers.CharField(max_length=30, required=True)
+    description = serializers.CharField(max_length=500, required=False)
+    total_amount = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Category
+        fields = ('id', 'name', 'description', 'total_amount')
+
+    def get_total_amount(self, obj):
+        return Category.objects.filter(pk=obj.id).aggregate(Sum('product__quantity'))['product__quantity__sum']
